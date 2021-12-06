@@ -1,0 +1,192 @@
+The main problem with scapy is that it cannot be used to intercept or drop packet flow from target to source
+
+So if we try to modify the request packets and send them to the router 
+then there will be two request packets to the router from the same source at once
+
+generally router responses to the first request that it gets, 
+and so while our program need sometime to read and write the data(maybe less than second, yet behind the original packet)
+hence there are chances that router never respose to our modified packet
+
+so the better chance is that we trap all these packets by using another module called netfilterqueue
+and we trap all these packets in a queue and them modify them and send them to the router
+
+the same method is used to madify the response packets
+
+Installing netfilterqueue module :-  pip install netfilterqueue
+importing netfilterqueue module :- import netfilterqueue
+
+first to trap all the route packets into a queue we need to use iptables program 
+
+this iptables program comes inbuilt with unix computers, and this is used to change the route of the network packets
+first we create the queue and them modify the routing channels of these packets once we become the man in the middle
+
+so create queue and modify route we use the command
+iptables -I FORWARD -j NFQUEUE --queue-num <queue number>
+(in this case the queue number is given 0)
+
+this queue number can be any number
+now this command means that we need to trap all the packet that go through the foward chain into a NFQUEUE inside a queue identified by its number
+we can also use subprocess module in our python program to execute this command in our python script
+
+to actually read and write the information inside these packets we need to create an netfilterqueue instance and bind this variable to the queue that we created
+this is done by using the bind() method on the created instance
+
+this bind() method takes two arguments, those are 1. queue number that we specified and 2. a call back function that executes on each packets that are trapped
+
+this call back function takes the packet as the parameter same as like the call back function that we written in the scapy.sniff() method
+
+once we run just the below program
+------------------python code start--------
+import netfilterqueue
+
+def modify_packet(packet):
+  print(packet)
+
+
+queue0 = netfilterqueue.NetfilterQueue()
+queue0.bind(0, modify_packet)
+queue0.run()
+----------------python code end-------------
+
+if we just try to print this packet this will result in the printing of the protocol that is used for the packet transfer and the size of each packet
+also the targets computer do not load the site 
+because we are just trapping these packets and we are never sending them to the router,
+to forward these packets to the router we use the accpet() method on each packet
+and to drop these packetd from not reaching the router we use the drop method on each packet
+
+once done with this function and after exiting the program we need to delete the iptables that are created at the start
+this can be done by the command "iptables --flush"
+
+sometimes while learning its better to apply the concepts learned(or learning especially while learning ethical hacking) on our own system
+since we know how this program works we can also have the solution for this type of attacks
+
+if we are trying to manipulate the routing rules for the packets sent by our system itself, them the chain that the packet flows through are INPUT and OUTPTU chain
+so the iptables command will be
+"iptables -I OUTPUT -j NFQUEUE --queue-num 0"
+"iptables -I INPUT -j NFQUEUE --queue-num 0"
+
+both these commands are necessary
+-----ALSO DO NOT FORGET TO REMOVE THE IPTABLES CREATED AFTER COMPLETION OF PROGRAM--------
+-----USE THE COMMAND "iptables --flush" TO DO THAT---------------
+
+we can use the "get_payload()" on each packet to get the information inside the packet, but we cannot modify the information using this netfilterqueue module
+
+now we know that, we can read and write information inside the packets using scapy module
+but this netfilterqueue module do not allow this
+so the better way is to comvet this each packet in queue into a scapy packet so that we can read and write the information in it
+
+So to convert the this packets into a scapy packet we use the IP() method in scapy module
+---------python code to convert into scapy packet--------------
+#add these lines
+import scapy.all as scapy
+#inside the call back function add this line 
+converted_packet = scapy.IP(packet.get_payload())
+-------------end of code-----------
+
+and we are done converting the packet
+and now we can read and write the data inside this packet 
+
+WHAT IS DNS_SPOOFING??????????
+and WHAT IS DNS?????
+
+kali machine comes with a prebuilt web server by the name apache
+to start this web server you need to run the command "service apache2 start"
+this will start the web server at your IP address
+and this loads the default web page that is written in your system
+
+to access this site or the web server you need to be in that local network which the web server is loaded into...
+if the web server is loaded in 10.0.0.1 and you are in the subnet of 100.1.2 and you cannot actually access that web server that is loaded at the IP 10.0.0.1
+more information about the command and web servers in here
+
+
+DNS is tuned in a way to resolve the domain names into IP addresses
+
+there are number of ways you can spoof the DNS request from the user 
+1. you can install the DNS server application and configure the server to repond the particular page for the requsts made by the user
+2. craft the IP address of the web server you installed rather than the actual IP address that user asked for(this requires the knowledge of how DNS works and netowrk layer works)
+3. forward the requsts to target machine and modify the IP address of the response packet sent by the DNS server and then forward it to user
+
+here we are using the 3rd way for DNS spoofing...
+
+one of the best method to get the DNS information is to ping the site
+ping --count 1 <{IP address} or {the site url}>
+this sends only one packet to the mentioned IP address and then since we are using the show() method on that packet, it prints all the layers and the informationin it
+along with the DNS related information
+
+all the packet we need to modify are the request or responses which contains the DNS requests
+
+the print statement shows all the layers and the information in each layer
+the layer we are intrested in is the DNS question and response record
+
+since we dont want our user to get the same page for whatever website he searches for
+we give our malware if he enters to a particular site
+so we can get the query that user asked for in the DNS question record under the qname variable
+and also the category of the request response
+
+if we print the DNS response record we can see the information about the response packets that are differentiated based on the qtype
+that particular response contains the final IP address of the requested site that user trying to access
+
+now all we need to do is to modify this IP address
+one more thing is that you only have to change the particular section(the main section where scapy cannot calculate, based on the remaining information in it)
+the remaining parameters are automatically calculated by scapy and it gives the values by its own
+in this case the main or the parent parameters are "rrname" and "rdata"
+
+
+now its time to send this packet to the user
+if we see the information layers in the scapy packet, we see that the response from the DNS server is in the "an" section
+and we modified this information and now have to insert this information
+
+this is cone by the line of code
+<packet_name>[scapy.DNS].an = <modifiedInformation>
+
+also DNS sends the number of number of answer packets that are sent to the user under the name ancount
+since we are creating only one modified packet we have to change this variable value to 1
+this value modification is same as the work done till now
+
+there are some more thing that are needed to take care of...
+there are "len" and "chksum" variables in the TCP and the UDP layer
+
+these two have their characterstics in the packet,
+len means the length of the packet and since we are changing the information in it, the length changes
+also chksum is used to check for the compromization of the packet information
+and this chksum value is calculated by the information that is present in the packet
+
+this value is calculate at the creation of packet at DNS server and also at the recieving end by the user,
+and then user calculates this chksum value based on the information inside the response packet, and compares with the given value in the packet,
+if this value matches, then its shows-up the packet, else this requests for the same query again to the router again...
+
+since scapy has the capability to calculate this chksum and len value and add it to the packet at the end of program execution, we can delete the previous value of chksum and len
+
+till now everything is fine, and our packet is good to go
+but the catch is that the information inside the packet that we are modifying is the scapy packet and 
+never actually modifed information in the actual packet that is trapped inside queue
+we can do set the payload of the original packet in the queue to the scapy packet,
+to do that we use the get_payload() method on the packet
+also make sure to convert the scapy packet information into str and then pass it as a parameter.
+
+all this program written is actually interpreted only in python2 
+
+the reason is that the module netfilterqueue installation is diffferent for the python3 version of the code
+for python3 installation of the netfilterqueue module you need to run the commands (both)
+"apt install python3-pip git libnfnetlink-dev libnetfilter-queue-dev"
+"pip3 install -U git+https://github.com/kti/python-netfilterqueue"
+
+and you are good to go to run this script in python3 version
+-----------TOMORROW NEED TO SEE WEATHER THIS WORKS IN PYTHON3 OR NOT ON WINDOWS VM-----------------
+
+if you are trying this against local machines then you need to run the commands
+iptables --flush
+iptables --table nat --flush
+iptables --delete-chain
+iptables -P FORWARD ACCEPT
+iptables -I OUTPUT -j NFQUEUE --queue-num 0
+echo 1 > /proc/sys/net/ipv4/ip_forward
+service apache2 start
+
+the first 4 commands are to delete the previous iptables that are created before and if any of them are not flushed before
+then to accept and create a netfilterqueue using the 
+echo command is to accept the actual packet flow in linux distros
+apache command is to start your own web server from your computer(kali comes with an inbuilt apache2 web server)
+
+then be the main in the middle and then run the ping commands or the attack on the user
+

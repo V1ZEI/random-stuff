@@ -1,0 +1,85 @@
+ARP spoofing attack is like man in the middle attack
+
+we change the router and clients both arp mac address so that victim system thinks host is the router,
+and the actual router thinks we are the victim asking for the information
+
+asusually we use the address resulotion protocol, which is the key to the communication between the two computers in a network
+this means that for the system1 to contact with system2 , s1 need the mac address of s2 to start the communication
+since the s1 knows the IP address of the s2 it sends a broadcast msg about asking the mac address of the IP address sent
+this then sent to all the systems in that network and then s2 responds with its mac address, and then the final conversation starts
+
+the most important part is that all the systems in the subnet has the router mac address stored in their arp cache, can check that table by using the command "arp -a"
+this command works in both windows and linux systems
+
+now all we had to do is to notify that our system is the router for the victim system and we are the IP of the victim system for the router
+this then makes every request and response from the victim to pass through our system(in decrypted mode)
+hence we can catch the information or steal or stop from flowing the request or response
+
+this is all can be done because the ARP after sending the updation of mac address packets
+this protocol dont check for the conformation, it just updates the mac address
+which in turn is so bad and the cool way to attack..
+
+there is inbulit tool in kali linux for this as so called arpspoof
+usage of arpspoof
+arpspoof -i <interface> -t <target IP> <src IP>
+we are trying to pretending that we are src by send reponse packet to the target IP pretending to be the source IP
+same way we have to do the one more time but this time we need to swap the IP values, coz we need to make router also think that we are the victim
+while doing this there is a security feature in lunix, this does not allow packet flow through your computer, we need to do that manually
+this is done by the command:
+	echo 1 > /proc/sys/net/ipv4/pi_forward
+and now everything is set and all good to go.
+
+so we use scapy for this to work
+syntax is:
+	var=scapy.ARP(op=2, pdst="<target IP>", hwdst="<target mac>", psrc="<source IP>")
+	scapy.send(var)
+here when we use scapy to generate packets, by default it created a request packets
+actually we need to create response packet that actually fools the victim and router
+so we set the op value to 2(by default the value is 1)
+pdst is the target IP address(in this case this is victims IP address)
+hwdst is the target mac address(in this case this is victims mac address)
+psrc is the source IP address(actually this is not, we are just fooling that victim that this response packet came from the psrc system)[in this case this is router)
+
+and then after sending this packet, we can check weather this worked or not by just checking the arp table in the victim system(i actually run the vm so i can check weather something is wrong or not)
+so that we can make some better code form this mistake
+one more thing is that we need to do the same thing for the router too, saying that i am the victim at this IP address in this network
+
+one of the cool ways of doing this is writing a reusable code or making different functions for each job that is performed
+so in here we use the previous network scanner python code to actually get the mac address of the victim system.
+
+so all done and finally we are the man in the middle you think..
+so try to do some web searches in the victim system and do check the arp table again
+ALERT: we are no longer man in the middle anymore
+
+this means that sending one packet is not enough and one packet means that just for that instant itself(indirectly)
+so to be the man in the middle we need to keep on sending these packets to both victim and router
+this can be done by using the while loop
+and also we have enable the ip packet forwarding in linux for this to work
+without this we are actually interrupting the internet connection to the victims system
+we do that by the command 
+"echo 1 > /proc/sys/net/ipv4/ip_forward"
+now almost everything is good to go..
+
+there are little changes about the syntax and code format in python2 and python3 
+for to print the number of packets sent dynamically over the same position and not to overflow the terminal space
+in python2 the syntax is
+	print("\r[+] sent packets: {}".format(number_of_packets)),
+	sys.stdout.flush()
+	#also need to import the sys module
+
+in python3 the syntax is
+	print(f"\r[+] sent packets: {number_of_packets}", end="")
+	#and all done to do this
+	# "#" this is used to comment the line in python and in here i used just to describe what it is
+
+one more annoying thing is the error messages that pops up after any error or unexpected interruptions
+this can be handled by try and catch method in python,
+where is if everything goes well the python runs the code and if anything goes wrong then it runs the exception code
+
+we are good people too, and at the end of our work we need to keep data in the arp table of both victim and router to as it is before the attack
+how do we do that??
+we do the same as before send a packet to the victim saying that i have this IP mac address
+but this time we add mac address of the IP to the packet too
+before while we are acting like man in the middle we are not specifying the source mac address,
+this means that by default scapy add our mac address to the packet unless specified
+

