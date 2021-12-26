@@ -2,7 +2,7 @@ import subprocess, smtplib, re, sys
 
 def usage():
   print("[+] Usage of the script")
-  print("[+] python response.py <From emailID> <password> <to emailID>")
+  print("[+] python wifi_keys.py <From emailID> <password> <to emailID>")
   sys.exit()
 
 def send_mails(from_email, password, to_email, msg):

@@ -9,26 +9,26 @@ import netfilterqueue
 import scapy.all as scapy
 
 # backup functions to get required input from user
-class Backup:
-	def get_machine(self):
-		return bool(input("Do you want to run this program on local machine(true/false): "))
+def get_machine(self):
+    return bool(input("Do you want to run this program on local machine(true/false): "))
     
-    def get_path(self):
-        return str(input("Enter the path of the inject code file: "))
+def get_path(self):
+    return str(input("Enter the path of the inject code file: "))
 
 # whether the script is running aganist local device or remote devices
 # Path of the script that you want to inject
 # queue-num of the iptables command
+
 def get_arguments():
 	p = argparse.ArgumentParser(description='File Interceptor program in python')
 	p.add_arguments('-l','--local', dest='local', help='Whether you want to run this on your local machine or not')
     p.add_arguments('-p', '--path', dest='path', help='enter the path of the file you want to inject your code')
     p.add_arguments('-qn','--queue-num', dest='queue_num', help='Queue number in IP tables that you want to capture the packtes into', default=0)
-	options = p.parse_args()
+    options = p.parse_args()
 	if not options.local:
-		options.local = Backup.get_machine()
+		options.local = get_machine()
     if not options.path:
-        options.path = Backup.get_path()
+        options.path = get_path()
 	return options
 
 arguments = get_arguments()

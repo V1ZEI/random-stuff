@@ -23,4 +23,4 @@ def packetInfo(packet):
         if loginDetails:
             print("\n\n[+] Possible login credentials -->>"+yourLoginDetails(packet) + "\n\n")
 
-yourInfo("eth0")
+yourInfo("NETWORK_INTERFACE")

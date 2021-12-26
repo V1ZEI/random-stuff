@@ -7,15 +7,14 @@ import subprocess
 import netfilterqueue
 import scapy.all as scapy
 
-class Backup:
-	def get_machine():
-		return bool(input("Do you want to run this program on local machine(true/false): "))
-    
-    def get_site():
-        return str(input("site: "))
+def get_machine():
+    return bool(input("Do you want to run this program on local machine(true/false): "))
 
-    def get_ip():
-        return str(input("Enter the IP address of site you want to serve: "))
+def get_site():
+    return str(input("site: "))
+
+def get_ip():
+    return str(input("Enter the IP address of site you want to serve: "))
 
 def get_arguments():
     p = argparse.ArgumentParser()
@@ -25,11 +24,11 @@ def get_arguments():
     p.add_arguments('-qn','--queue-num', dest='queue_num', help='Queue number in IP tables that you want to capture the packtes into', default=0)
     options = p.parse_args()
     if not options.Site:
-        options.Site = Backup.get_site()
+        options.Site = get_site()
     if not options.local:
-		options.local = Backup.get_machine()
+		options.local = get_machine()
     if not options.ip:
-        options.ip = Backup.get_ip()
+        options.ip = get_ip()
     return options
 
 arguments = get_arguments()
